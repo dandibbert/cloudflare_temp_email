@@ -1,15 +1,19 @@
 import { CONSTANTS } from "../constants";
+import { getSplitStringListValue } from "../utils";
+import { isSenderBlockedByRules, normalizeBlockList } from "./sender_block_policy";
+
+export { isSenderBlockedByRules, normalizeBlockList } from "./sender_block_policy";
 
 export const isBlocked = async (from: string, env: Bindings): Promise<boolean> => {
-    if (env.BLACK_LIST && env.BLACK_LIST.split(",").some(word => from.includes(word))) {
+    if (isSenderBlockedByRules(from, getSplitStringListValue(env.BLACK_LIST))) {
         return true;
     }
     if (!env.KV) {
         return false;
     }
-    const blockList = await env.KV.get<string[]>(CONSTANTS.EMAIL_KV_BLACK_LIST, 'json') || [];
-    if (blockList.some(word => from.includes(word))) {
-        return true;
+    const blockList = await env.KV.get<unknown>(CONSTANTS.EMAIL_KV_BLACK_LIST, 'json');
+    if (blockList !== null && !Array.isArray(blockList)) {
+        throw new Error("Invalid sender block list in KV");
     }
-    return false;
+    return isSenderBlockedByRules(from, blockList);
 }

@@ -188,6 +188,7 @@ export type UserOauth2Settings = {
 
 export type EmailRuleSettings = {
     blockReceiveUnknowAddressEmail: boolean;
+    contentBlockList?: string[];
     emailForwardingList: SubdomainForwardAddressList[]
 }
 

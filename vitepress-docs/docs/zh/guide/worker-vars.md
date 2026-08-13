@@ -93,6 +93,7 @@
 | `ENABLE_CHECK_JUNK_MAIL`        | 文本/JSON | 是否启用垃圾邮件检查，配合下列两个列表使用                                 | `false`                    |
 | `JUNK_MAIL_CHECK_LIST`          | JSON      | 存在性检查；已注册的失败/错误结果判定为垃圾邮件，`none` 和 SPF/DKIM `neutral` 按不存在处理 | `["spf", "dkim", "dmarc"]` |
 | `JUNK_MAIL_FORCE_PASS_LIST`     | JSON      | 强制通过检查；每一项都必须明确返回 `pass`，否则判定为垃圾邮件              | `["spf", "dkim", "dmarc"]` |
+| `JUNK_MAIL_TRUSTED_AUTHSERV_IDS` | JSON     | 可被垃圾邮件检查信任的 `Authentication-Results` 认证服务标识；默认仅信任 Cloudflare Email Routing | `["mx.cloudflare.net"]` |
 | `FORWARD_ADDRESS_LIST`          | JSON      | 全局转发地址列表，如果不配置则不启用，启用后所有邮件都会转发到列表中的地址 | `["xxx@xxx.com"]`          |
 | `REMOVE_EXCEED_SIZE_ATTACHMENT` | 文本/JSON | 如果附件大小超过 2MB，则删除附件，邮件可能由于解析而丢失一些信息           | `true`                     |
 | `REMOVE_ALL_ATTACHMENT`         | 文本/JSON | 移除所有附件，邮件可能由于解析而丢失一些信息                               | `true`                     |
@@ -101,6 +102,10 @@
 
 > [!NOTE]
 > 认证结果遵循各自规范：SPF `none` 表示没有可检查的域名或 SPF 记录，SPF `neutral` 必须与 `none` 相同处理；DKIM `none` 表示邮件未签名，DKIM `neutral` 同样按未签名处理；DMARC `none` 表示没有适用的 DMARC 策略。未注册结果和不支持的方法版本也会被忽略。`JUNK_MAIL_CHECK_LIST` 将这些结果视为认证方法不存在，`JUNK_MAIL_FORCE_PASS_LIST` 仍只接受明确且受支持的 `pass`
+>
+> 为避免攻击者在原始邮件中伪造认证结果，垃圾邮件检查默认只使用第一条由 `mx.cloudflare.net` 写入的 `Authentication-Results`。如果邮件先经过自建可信网关，请将该网关实际使用的 `authserv-id` 加入 `JUNK_MAIL_TRUSTED_AUTHSERV_IDS`。
+>
+> 管理后台的“邮件标题和内容屏蔽关键词”会对解码后的标题、纯文本正文和 HTML 可见文字做不区分大小写的子串匹配。命中后邮件会在落库、转发、Webhook、Telegram 推送和自动回复之前直接拒收。最多配置 200 项，每项最多 200 字符。
 >
 > `ENABLE_MAIL_GZIP` 会增加邮件写入压缩与读取解压的 CPU 消耗，免费版 Worker 更容易触发 CPU 限制，建议付费 Plan 再开启
 >

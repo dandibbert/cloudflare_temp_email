@@ -51,6 +51,7 @@ export default {
             "ENABLE_CHECK_JUNK_MAIL": utils.getBooleanValue(c.env.ENABLE_CHECK_JUNK_MAIL),
             "JUNK_MAIL_CHECK_LIST": utils.getStringArray(c.env.JUNK_MAIL_CHECK_LIST),
             "JUNK_MAIL_FORCE_PASS_LIST": utils.getStringArray(c.env.JUNK_MAIL_FORCE_PASS_LIST),
+            "JUNK_MAIL_TRUSTED_AUTHSERV_IDS": utils.getStringArray(c.env.JUNK_MAIL_TRUSTED_AUTHSERV_IDS),
 
             "REMOVE_EXCEED_SIZE_ATTACHMENT": utils.getBooleanValue(c.env.REMOVE_EXCEED_SIZE_ATTACHMENT),
             "REMOVE_ALL_ATTACHMENT": utils.getBooleanValue(c.env.REMOVE_ALL_ATTACHMENT),

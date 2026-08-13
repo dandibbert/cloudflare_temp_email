@@ -2192,6 +2192,18 @@ export const MESSAGE_REGISTRY = {
       "en": "Block receive unknow address email",
       "zh": "禁止接收未知地址邮件"
     },
+    "contentBlockList": {
+      "en": "Subject and content block keywords",
+      "zh": "邮件标题和内容屏蔽关键词"
+    },
+    "contentBlockListPlaceholder": {
+      "en": "Enter a keyword and press Enter",
+      "zh": "输入关键词后按回车添加"
+    },
+    "contentBlockListTip": {
+      "en": "Case-insensitive substring matching across the decoded subject, plain-text body, and visible HTML text. A match rejects the mail before storage, forwarding, webhooks, Telegram push, or auto-reply. Up to 200 keywords, 200 characters each.",
+      "zh": "对解码后的标题、纯文本正文和 HTML 可见文字做不区分大小写的子串匹配；命中后会在落库、转发、Webhook、Telegram 推送和自动回复之前直接拒收。最多 200 项，每项最多 200 字符。"
+    },
     "cancel": {
       "en": "Cancel",
       "zh": "取消"
@@ -2271,6 +2283,10 @@ export const MESSAGE_REGISTRY = {
     "fromBlockList": {
       "en": "Block Keywords for receive email",
       "zh": "接收邮件地址屏蔽关键词"
+    },
+    "fromBlockListTip": {
+      "en": "Supports exact addresses, domains (including subdomains), and ordinary sender keywords. Matching is case-insensitive and empty entries are ignored.",
+      "zh": "支持精确邮箱、域名（含子域）和普通发件人关键词；匹配不区分大小写，空项会被忽略。"
     },
     "manualInputPrompt": {
       "en": "Type and press Enter to add",

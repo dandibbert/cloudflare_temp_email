@@ -10,7 +10,13 @@
 
 ### Features
 
+- feat: |Mail Rejection| Add admin-configurable subject and body block keywords with case-insensitive matching across decoded subjects, plain text, and visible HTML, rejecting matches before storage or external actions
+
 ### Bug Fixes
+
+- fix: |Mail Rejection| Normalize sender rules, ignore empty entries, and match exact addresses, domain boundaries, or ordinary keywords; clearing the admin list now removes the stale KV value
+- fix: |Mail Rejection| Trust only configured `Authentication-Results` authserv IDs, defaulting to `mx.cloudflare.net`, so forged authentication headers in the original message cannot bypass rejection
+- fix: |Mail Rejection| Move unknown-address checks before MIME reads and stop processing when rule loading, address lookup, authentication/content parsing, or storage fails, preventing fail-open delivery and downstream forwarding, webhooks, Telegram pushes, or auto-replies
 
 ### Improvements
 
@@ -24,6 +30,7 @@
 
 - fix: |E2E| Add regression coverage ensuring user settings do not rewrite recent address activity timestamps
 - fix: |E2E| Cover cleanup batch limits, continuation on later runs, preservation of recent data, and address-related data cleanup
+- test: |Mail Rejection| Cover sender boundaries and empty rules, trusted authentication headers, subject/plain-text/HTML keywords, KV clearing, and unknown-address rejection
 
 ## v1.10.0
 

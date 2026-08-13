@@ -4,6 +4,8 @@ type AuthenticationResult = {
     version?: string,
 }
 
+const DEFAULT_TRUSTED_AUTHSERV_IDS = ["mx.cloudflare.net"];
+
 const supportedResults: Record<string, ReadonlySet<string>> = {
     spf: new Set(["none", "neutral", "pass", "fail", "softfail", "policy", "temperror", "permerror"]),
     dkim: new Set(["none", "neutral", "pass", "fail", "policy", "temperror", "permerror"]),
@@ -29,6 +31,14 @@ const parseAuthenticationResults = (value: string): AuthenticationResult[] => {
 
 const normalizeCheckName = (value: string): string => value.trim().toLowerCase();
 
+const normalizeAuthservIds = (values: string[]): Set<string> => new Set(
+    values.map((value) => value.trim().toLowerCase()).filter(Boolean)
+);
+
+const getAuthservId = (value: string): string => {
+    return value.split(";", 1)[0].trim().toLowerCase();
+}
+
 const trackAuthenticationResult = (
     method: string,
     result: string | undefined,
@@ -50,28 +60,37 @@ export const isJunkMailByHeaders = (
     headers: Record<string, string>[],
     checkListWhenExist: string[],
     forcePassList: string[],
+    trustedAuthservIds: string[] = DEFAULT_TRUSTED_AUTHSERV_IDS,
 ): boolean => {
     const passed = new Set<string>();
     const existing = new Set<string>();
+    const trustedIds = normalizeAuthservIds(trustedAuthservIds);
+    const trustedAuthenticationResults = headers.find((header) => {
+        return header["key"]?.toLowerCase() === "authentication-results"
+            && trustedIds.has(getAuthservId(header["value"] || ""));
+    });
 
-    for (const header of headers) {
-        const key = header["key"]?.toLowerCase();
-        const value = header["value"];
-        if (!key || !value) continue;
-
-        if (key === "received-spf") {
-            const result = value.match(/^[ \t]*([a-z][a-z0-9_-]*)/i)?.[1]?.toLowerCase();
-            if (!result || !receivedSpfResults.has(result)) continue;
-            trackAuthenticationResult("spf", result, existing, passed);
-            continue;
-        }
-
-        if (key !== "authentication-results") continue;
-
-        for (const { method, result, version } of parseAuthenticationResults(value)) {
+    if (trustedAuthenticationResults?.["value"]) {
+        for (const { method, result, version } of parseAuthenticationResults(
+            trustedAuthenticationResults["value"]
+        )) {
             if (method !== "spf" && method !== "dkim" && method !== "dmarc") continue;
             if (version && version !== "1") continue;
             trackAuthenticationResult(method, result, existing, passed);
+        }
+    } else {
+        const trustedReceivedSpf = headers.find((header) => {
+            const key = header["key"]?.toLowerCase();
+            const value = header["value"] || "";
+            const receiver = value.match(/\breceiver\s*=\s*"?([^;\s"]+)/i)?.[1]?.toLowerCase();
+            return key === "received-spf" && !!receiver && trustedIds.has(receiver);
+        });
+        if (trustedReceivedSpf?.["value"]) {
+            const result = trustedReceivedSpf["value"]
+                .match(/^[ \t]*([a-z][a-z0-9_-]*)/i)?.[1]?.toLowerCase();
+            if (result && receivedSpfResults.has(result)) {
+                trackAuthenticationResult("spf", result, existing, passed);
+            }
         }
     }
 

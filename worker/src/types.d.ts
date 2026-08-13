@@ -73,6 +73,7 @@ type Bindings = {
     ENABLE_CHECK_JUNK_MAIL: string | boolean | undefined
     JUNK_MAIL_CHECK_LIST: string | string[] | undefined
     JUNK_MAIL_FORCE_PASS_LIST: string | string[] | undefined
+    JUNK_MAIL_TRUSTED_AUTHSERV_IDS: string | string[] | undefined
 
     ENABLE_ANOTHER_WORKER: string | boolean | undefined
     ANOTHER_WORKER_LIST: string | AnotherWorker[] | undefined

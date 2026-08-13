@@ -10,6 +10,8 @@ import {
     validateSendMailLimitConfig
 } from '../mails_api/send_mail_limit_utils'
 import { EmailRuleSettings } from '../models'
+import { normalizeBlockList } from '../email/sender_block_policy'
+import { normalizeEmailRuleSettings } from '../email/rule_settings'
 
 const normalizeAddressCreationSettingsUpdate = (
     value: unknown
@@ -74,14 +76,25 @@ const get = async (c: Context<HonoCustomType>) => {
 
 const save = async (c: Context<HonoCustomType>) => {
     const msgs = i18n.getMessagesbyContext(c);
+    const body = await c.req.json();
+    const hasFromBlockList = Object.prototype.hasOwnProperty.call(body, 'fromBlockList');
     const {
         blockList, sendBlockList, noLimitSendAddressList,
         verifiedAddressList, fromBlockList, emailRuleSettings, addressCreationSettings,
         sendMailLimitConfig
-    } = await c.req.json();
-    if (!blockList || !sendBlockList || !verifiedAddressList) {
+    } = body;
+    if (!Array.isArray(blockList)
+        || !Array.isArray(sendBlockList)
+        || !Array.isArray(verifiedAddressList)
+        || (hasFromBlockList && !Array.isArray(fromBlockList))
+    ) {
         return c.text(msgs.InvalidInputMsg, 400)
     }
+    const normalizedEmailRuleSettings = normalizeEmailRuleSettings(emailRuleSettings || {});
+    if (!normalizedEmailRuleSettings) {
+        return c.text(msgs.InvalidInputMsg, 400)
+    }
+    const normalizedFromBlockList = normalizeBlockList(fromBlockList);
     const addressCreationSettingsUpdate = normalizeAddressCreationSettingsUpdate(addressCreationSettings);
     if (!addressCreationSettingsUpdate) {
         return c.text(msgs.InvalidInputMsg, 400)
@@ -90,7 +103,7 @@ const save = async (c: Context<HonoCustomType>) => {
         return c.text(msgs.EnableSendMailMsg, 400)
     }
     // 所有输入依赖都先校验，再执行任意写入，避免接口返回 400 时出现部分设置已落库的半成功状态。
-    if (fromBlockList?.length > 0 && !c.env.KV) {
+    if (hasFromBlockList && normalizedFromBlockList.length > 0 && !c.env.KV) {
         return c.text(msgs.EnableKVMsg, 400)
     }
     if (sendMailLimitConfig && !validateSendMailLimitConfig(sendMailLimitConfig)) {
@@ -102,11 +115,15 @@ const save = async (c: Context<HonoCustomType>) => {
     await saveSetting(c, CONSTANTS.ADDRESS_BLOCK_LIST_KEY, JSON.stringify(blockList));
     await saveSetting(c, CONSTANTS.SEND_BLOCK_LIST_KEY, JSON.stringify(sendBlockList));
     await saveSetting(c, CONSTANTS.VERIFIED_ADDRESS_LIST_KEY, JSON.stringify(verifiedAddressList));
-    if (fromBlockList?.length > 0 && c.env.KV) {
-        await c.env.KV.put(CONSTANTS.EMAIL_KV_BLACK_LIST, JSON.stringify(fromBlockList))
+    if (hasFromBlockList && c.env.KV) {
+        if (normalizedFromBlockList.length > 0) {
+            await c.env.KV.put(CONSTANTS.EMAIL_KV_BLACK_LIST, JSON.stringify(normalizedFromBlockList))
+        } else {
+            await c.env.KV.delete(CONSTANTS.EMAIL_KV_BLACK_LIST)
+        }
     }
     await saveSetting(c, CONSTANTS.NO_LIMIT_SEND_ADDRESS_LIST_KEY, JSON.stringify(noLimitSendAddressList || []));
-    await saveSetting(c, CONSTANTS.EMAIL_RULE_SETTINGS_KEY, JSON.stringify(emailRuleSettings || {}));
+    await saveSetting(c, CONSTANTS.EMAIL_RULE_SETTINGS_KEY, JSON.stringify(normalizedEmailRuleSettings));
     if (addressCreationSettingsUpdate.shouldUpdate) {
         if (addressCreationSettingsUpdate.shouldClear) {
             await deleteSetting(c, CONSTANTS.ADDRESS_CREATION_SETTINGS_KEY);
