@@ -10,15 +10,25 @@
 
 ### Features
 
+- feat: |Mail Rejection| Add admin-configurable subject and body block keywords with case-insensitive matching across decoded subjects, plain text, and visible HTML, rejecting matches before storage or external actions
+
 - feat: |AI Extract| Add `AI_EXTRACT_MODE` to explicitly choose local rules only (`local`) or prefer Workers AI (`ai`); defaults to local rules when unset so mail content is never sent to AI. **Upgrade note**: deployments that relied on the Workers AI binding to enable AI extraction automatically must set `AI_EXTRACT_MODE = "ai"`
 
 ### Bug Fixes
+
+- fix: |Mail Rejection| Normalize sender rules, ignore empty entries, and match exact addresses, domain boundaries, or ordinary keywords; clearing the admin list now removes the stale KV value
+- fix: |Mail Rejection| Trust only configured `Authentication-Results` authserv IDs, defaulting to `mx.cloudflare.net`, so forged authentication headers in the original message cannot bypass rejection
+- fix: |Mail Rejection| Move unknown-address checks before MIME reads and stop processing when rule loading, address lookup, authentication/content parsing, or storage fails, preventing fail-open delivery and downstream forwarding, webhooks, Telegram pushes, or auto-replies
 
 - fix: |AI Extract| In `ai` mode, an address allowlist miss now skips only the Workers AI call and still falls back to local verification-code extraction
 
 ### Improvements
 
 - feat: |AI Extract| Improve local verification-code rules: also read the mail subject; support codes before keywords (e.g. `116352（动态验证码）`, `ABC123 is your code`), `G-123456` prefixes, grouped / spaced / zero-width-split / full-width codes, and Russian, Spanish, Portuguese, French, German, Italian, Turkish and Hebrew keywords; reject numbers longer than 8 digits, decimals and amounts, times, digits in URLs and email addresses, tracking / order / voucher codes and letters-only words; only accept keyword-less numbers in stricter positions; bound input length and remove regex backtracking risks
+
+### Testing
+
+- test: |Mail Rejection| Cover sender boundaries and empty rules, trusted authentication headers, subject/plain-text/HTML keywords, KV clearing, and unknown-address rejection
 
 ## v1.12.0
 
