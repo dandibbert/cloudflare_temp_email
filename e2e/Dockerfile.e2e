@@ -11,5 +11,6 @@ RUN npm ci
 COPY e2e/ .
 # Dependency-free worker modules covered by unit tests in tests/unit/
 COPY worker/src/email/extract_code.ts worker/src/email/extract_mode.ts /app/worker/src/email/
+COPY worker/src/telegram_api/target.ts /app/worker/src/telegram_api/
 
 ENTRYPOINT ["/app/e2e/scripts/docker-entrypoint.sh"]
