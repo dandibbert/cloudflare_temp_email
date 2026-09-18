@@ -9,7 +9,7 @@
     "deploy": "wrangler deploy --minify",
     "start": "wrangler dev",
     "build": "wrangler deploy --dry-run --outdir dist --minify",
-    "test": "node --experimental-strip-types --test src/email/*.test.mjs"
+    "test": "node --experimental-strip-types --test src/email/*.test.mjs src/telegram_api/*.test.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260911.1",
