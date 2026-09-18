@@ -7,6 +7,7 @@ import { CONSTANTS } from "../constants";
 import { getBooleanValue, getDomains, getJsonObjectValue, trimLower } from '../utils';
 import { TelegramSettings } from "./settings";
 import { sendTelegramAttachments } from "./tg_file_upload";
+import { isTelegramButtonTypeInvalidError, supportsTelegramWebAppButton } from "./target";
 import { bindTelegramAddress, deleteTelegramAddress, jwtListToAddressData, tgUserNewAddress, unbindTelegramAddress, unbindTelegramByAddress } from "./common";
 import { commonParseMail } from "../common";
 import { resolveRawEmail } from "../gzip";
@@ -491,15 +492,26 @@ export async function sendMailToTelegram(
         if (!mail) return;
         const attachments = parsedEmailContext.parsedEmail?.attachments || [];
         const buttons = [];
-        if (settings?.miniAppUrl && mailId) {
+        if (settings?.miniAppUrl && mailId && supportsTelegramWebAppButton(targetUserId)) {
             const url = new URL(settings.miniAppUrl);
             url.pathname = "/telegram_mail"
             url.searchParams.set("mail_id", mailId);
             buttons.push(Markup.button.webApp(msgs.TgViewMailBtnMsg, url.toString()));
         }
-        await bot.telegram.sendMessage(targetUserId, mail, {
-            ...Markup.inlineKeyboard([...buttons])
-        });
+
+        if (buttons.length === 0) {
+            await bot.telegram.sendMessage(targetUserId, mail);
+        } else {
+            try {
+                await bot.telegram.sendMessage(targetUserId, mail, {
+                    ...Markup.inlineKeyboard([...buttons])
+                });
+            } catch (error) {
+                if (!isTelegramButtonTypeInvalidError(error)) throw error;
+                console.warn(`Telegram rejected web_app button for target ${targetUserId}; retrying without buttons`);
+                await bot.telegram.sendMessage(targetUserId, mail);
+            }
+        }
         // send attachments via native fetch (telegraf multipart upload is incompatible with CF Workers)
         if (getBooleanValue(c.env.ENABLE_TG_PUSH_ATTACHMENT) && attachments.length > 0) {
             const caption = `From: ${parsedEmailContext.parsedEmail?.sender || ""}\nSubject: ${parsedEmailContext.parsedEmail?.subject || ""}`;
