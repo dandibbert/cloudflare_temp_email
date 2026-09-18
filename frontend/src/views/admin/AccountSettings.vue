@@ -18,6 +18,7 @@ const verifiedAddressList = ref([])
 const fromBlockList = ref([])
 const emailRuleSettings = ref({
     blockReceiveUnknowAddressEmail: false,
+    contentBlockList: [],
     emailForwardingList: []
 })
 const ADDRESS_CREATION_SUBDOMAIN_MATCH_MODE = {
@@ -264,6 +265,7 @@ const fetchData = async ({ suppressErrorMessage = false } = {}) => {
         noLimitSendAddressList.value = res.noLimitSendAddressList || []
         emailRuleSettings.value = {
             blockReceiveUnknowAddressEmail: res.emailRuleSettings?.blockReceiveUnknowAddressEmail || false,
+            contentBlockList: res.emailRuleSettings?.contentBlockList || [],
             emailForwardingList: res.emailRuleSettings?.emailForwardingList || []
         }
         addressCreationSubdomainMatchStatus.value = {
@@ -420,13 +422,29 @@ onMounted(async () => {
                 </n-flex>
             </n-form-item-row>
             <n-form-item-row :label="t('fromBlockList')">
-                <n-select v-model:value="fromBlockList" filterable multiple tag :placeholder="t('fromBlockList')">
-                    <template #empty>
-                        <n-text depth="3">
-                            {{ t('manualInputPrompt') }}
-                        </n-text>
-                    </template>
-                </n-select>
+                <n-flex vertical style="width: 100%;">
+                    <n-select v-model:value="fromBlockList" filterable multiple tag :placeholder="t('fromBlockList')">
+                        <template #empty>
+                            <n-text depth="3">
+                                {{ t('manualInputPrompt') }}
+                            </n-text>
+                        </template>
+                    </n-select>
+                    <n-text depth="3">{{ t('fromBlockListTip') }}</n-text>
+                </n-flex>
+            </n-form-item-row>
+            <n-form-item-row :label="t('contentBlockList')">
+                <n-flex vertical style="width: 100%;">
+                    <n-select v-model:value="emailRuleSettings.contentBlockList" filterable multiple tag
+                        :placeholder="t('contentBlockListPlaceholder')" max-tag-count="responsive">
+                        <template #empty>
+                            <n-text depth="3">
+                                {{ t('manualInputPrompt') }}
+                            </n-text>
+                        </template>
+                    </n-select>
+                    <n-text depth="3">{{ t('contentBlockListTip') }}</n-text>
+                </n-flex>
             </n-form-item-row>
             <n-form-item-row :label="t('block_receive_unknow_address_email')">
                 <n-switch v-model:value="emailRuleSettings.blockReceiveUnknowAddressEmail" :round="false" />
