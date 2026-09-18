@@ -44,7 +44,7 @@ const receiveMail = async (
     html || `<p>${text}</p>`,
     `--${boundary}--`,
   ].join('\r\n');
-  const response = await request.post(`${WORKER_URL}/admin/test/receive_mail`, {
+  const response = await request.post(`${WORKER_URL}/__test/receive_mail`, {
     data: { from, to, raw },
   });
   expect(response.ok()).toBe(true);
