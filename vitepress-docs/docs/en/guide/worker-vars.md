@@ -12,6 +12,9 @@
 | `ADMIN_PASSWORDS`          | JSON        | Admin console passwords, console access disabled if not configured     | `["123", "456"]`                     |
 | `ENABLE_USER_CREATE_EMAIL` | Text/JSON   | Whether to allow users to create mailboxes, disabled if not configured | `true`                               |
 | `ENABLE_USER_DELETE_EMAIL` | Text/JSON   | Whether to allow users to delete emails, disabled if not configured    | `true`                               |
+| `ENABLE_MAIL_READ_STATUS` | Text/JSON | Enables read/unread mail state. Upgrade the database schema before enabling | `true` |
+| `ENABLE_REDEEM_CODE` | Text/JSON | Enables the redemption page, public redemption APIs, and Admin redemption management; disabled by default | `true` |
+| `REDEEM_CODE_URL` | Text | External URL for obtaining redemption codes; the link is hidden when unset | `https://example.com/redeem-codes` |
 
 > [!IMPORTANT] `DOMAINS` and `DEFAULT_DOMAINS` must already be set up in Cloudflare
 > Every domain you put here (including `DEFAULT_DOMAINS`, `USER_ROLES.domains`, `RANDOM_SUBDOMAIN_DOMAINS` further below) **must already have Cloudflare Email Routing enabled and its email DNS records provisioned**. After the Worker is deployed, bind the domain's Catch-all rule to that Worker; otherwise inbound mail will never reach the Worker.
@@ -22,7 +25,10 @@
 | Variable Name                  | Type      | Description                                             | Example          |
 | ------------------------------ | --------- | ------------------------------------------------------- | ---------------- |
 | `PASSWORDS`                    | JSON      | Website private passwords, required after configuration | `["123", "456"]` |
+| `ADMIN_API_IP_WHITELIST`       | JSON      | Admin API IP whitelist; when configured, only listed IPs may access `/admin/*` | `["203.0.113.10"]` |
 | `DISABLE_ADMIN_PASSWORD_CHECK` | Text/JSON | Warning: Admin console without password or user check   | `false`          |
+
+When `ADMIN_API_IP_WHITELIST` is unset or empty, source IPs are not restricted. Once configured, it applies to both admin-password and Admin user-token access, trusts only Cloudflare's `CF-Connecting-IP` header, and denies requests without that header.
 
 ## Email Related Variables
 
@@ -32,12 +38,13 @@
 | `MIN_ADDRESS_LEN`                     | Number    | Minimum length of `email address` name                                                                                                                                                                            | `1`                                       |
 | `MAX_ADDRESS_LEN`                     | Number    | Maximum length of `email address` name                                                                                                                                                                            | `30`                                      |
 | `DISABLE_CUSTOM_ADDRESS_NAME`         | Text/JSON | Disable custom email address names, if set to true, users cannot enter custom names and they will be auto-generated                                                                                               | `true`                                    |
+| `DISABLE_ADDRESS_UPDATED_AT` | Text/JSON | Defaults to `false`. Set to `true` to stop individual and user-wide address activity keep-alive updates and disable built-in manual and scheduled inactive-address cleanup. Initial address timestamps, password operations, and other cleanup rules remain unchanged | `true` |
 | `ADDRESS_CHECK_REGEX`                 | Text      | Regular expression for `email address` name, used for validation only                                                                                                                                             | `^(?!.*admin).*`                          |
 | `ADDRESS_REGEX`                       | Text      | Regular expression to replace illegal symbols in `email address` name, symbols not in the regex will be replaced. Default is `[^a-z0-9]` if not set. Use with caution as some symbols may prevent email reception | `[^a-z0-9]`                               |
 | `DEFAULT_DOMAINS`                     | JSON      | Default domains available to users (not logged in or users without assigned roles)                                                                                                                                | `["awsl.uk", "dreamhunter2333.xyz"]`      |
 | `CREATE_ADDRESS_DEFAULT_DOMAIN_FIRST` | Text/JSON | Whether to prioritize default domain when creating new addresses, if set to true, will use the first domain when no domain is specified, mainly for telegram bot scenarios                                        | `false`                                   |
 | `ENABLE_CREATE_ADDRESS_SUBDOMAIN_MATCH` | Text/JSON | Whether to allow create-address APIs to use base-domain suffix matching. When enabled, if `example.com` is allowed, `/api/new_address` and `/admin/new_address` can also accept `foo.example.com` or `a.b.example.com` | `true` |
-| `RANDOM_SUBDOMAIN_DOMAINS`            | JSON      | Base domains that allow optional random subdomain creation, so `name@abc.com` can become `name@<random>.abc.com`                                                                                                   | `["abc.com"]`                             |
+| `RANDOM_SUBDOMAIN_DOMAINS`            | JSON      | Base domains that allow random or manual subdomains; random mode can turn `name@abc.com` into `name@<random>.abc.com`                                                                                              | `["abc.com"]`                             |
 | `RANDOM_SUBDOMAIN_LENGTH`             | Number    | Random subdomain length, default `8`, valid range `1-63`                                                                                                                                                           | `8`                                       |
 | `DOMAIN_LABELS`                       | JSON      | For Chinese domains, you can use DOMAIN_LABELS to display Chinese names                                                                                                                                           | `["中文.awsl.uk", "dreamhunter2333.xyz"]` |
 | `ENABLE_AUTO_REPLY`                   | Text/JSON | Allow automatic email replies. Sender filter (`source_prefix`) supports three modes: empty to match all senders, prefix for `startsWith` matching, or `/regex/` syntax for regex matching (e.g. `/@example\.com$/`) | `true`                                    |
@@ -50,8 +57,8 @@
 > [!NOTE]
 > When `DEFAULT_DOMAINS` is unset or configured as an empty array, it falls back to `DOMAINS`.
 >
-> `RANDOM_SUBDOMAIN_DOMAINS` only controls automatic random subdomain generation during mailbox
-> creation. It does not create Cloudflare-side subdomain routing for you.
+> `RANDOM_SUBDOMAIN_DOMAINS` defines the base-domain scope shared by the frontend random and manual
+> subdomain modes. It does not create Cloudflare-side subdomain routing for you.
 >
 > To actually receive mail on addresses like `name@<random>.abc.com`, **you must add a wildcard
 > `*` MX record under the base domain in DNS** by copying the apex's existing MX records to
@@ -65,9 +72,8 @@
 > Subdomain addresses are usually best used for receiving only; for sending, prefer the main
 > domain.
 >
-> `ENABLE_CREATE_ADDRESS_SUBDOMAIN_MATCH` is different from random subdomain generation: it lets
-> API callers **directly specify** a subdomain such as `foo.example.com`, while random subdomain
-> generation appends one automatically during creation.
+> `ENABLE_CREATE_ADDRESS_SUBDOMAIN_MATCH` is independent from those frontend modes. It lets API
+> callers **directly specify** subdomains such as `foo.example.com` under other allowed base domains.
 >
 > `ENABLE_CREATE_ADDRESS_SUBDOMAIN_MATCH` precedence: if the env is explicitly set to `false`, the
 > feature is globally forced off; otherwise the persisted admin setting takes precedence, and the env
@@ -127,6 +133,7 @@
 | ---------------- | --------- | ------------------------------------------------- | ------------------ |
 | `ENABLE_WEBHOOK` | Text/JSON | Whether to enable webhook                         | `true`             |
 | `FRONTEND_URL`   | Text      | Frontend URL, used for sending webhook email URLs | `https://xxxx.xxx` |
+| `BACKEND_URL` | Text | Public backend base URL for signed attachment links; attachment URLs are empty when unset | `https://temp-email-api.example.com` |
 
 > [!NOTE]
 > Webhook functionality requires email parsing, free tier CPU is limited, may cause large email parsing timeout

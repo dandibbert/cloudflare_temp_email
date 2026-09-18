@@ -7,6 +7,7 @@ import { NBadge, NPopconfirm, NButton } from 'naive-ui'
 import { useGlobalState } from '../../store'
 import { api } from '../../api'
 import { getRouterPathWithLang } from '../../utils'
+import AddressCredentialModal from '../../components/AddressCredentialModal.vue'
 
 import Login from '../common/Login.vue';
 
@@ -15,6 +16,7 @@ const message = useMessage()
 const router = useRouter()
 
 const { locale, t } = useScopedI18n('views.user.AddressManagement')
+const { t: credentialT } = useScopedI18n('components.AddressCredentialModal')
 
 const data = ref([])
 const count = ref(0)
@@ -24,11 +26,24 @@ const showTranferAddress = ref(false)
 const currentAddress = ref("")
 const currentAddressId = ref(0)
 const targetUserEmail = ref('')
+const showAddressCredential = ref(false)
+const currentAddressCredential = ref('')
+const credentialAddress = ref('')
+
+const showCredential = async (row) => {
+    try {
+        const { jwt: addressCredential } = await api.fetch(`/user_api/bind_address_jwt/${row.id}`)
+        currentAddressCredential.value = addressCredential
+        credentialAddress.value = row.name
+        showAddressCredential.value = true
+    } catch (error) {
+        message.error(error.message || "error")
+    }
+}
 
 const changeMailAddress = async (address_id) => {
     try {
         const res = await api.fetch(`/user_api/bind_address_jwt/${address_id}`);
-        message.success(t('changeMailAddress') + " " + t('success'));
         if (!res.jwt) {
             message.error("jwt not found");
             return;
@@ -114,7 +129,7 @@ const fetchData = async () => {
 
 const columns = [
     {
-        title: t('name'),
+        title: t('emailAddress'),
         key: "name"
     },
     {
@@ -146,6 +161,14 @@ const columns = [
         key: 'actions',
         render(row) {
             return h('div', [
+                h(NButton,
+                    {
+                        tertiary: true,
+                        type: "primary",
+                        onClick: () => showCredential(row)
+                    },
+                    { default: () => credentialT('addressCredential') }
+                ),
                 h(NPopconfirm,
                     {
                         onPositiveClick: () => changeMailAddress(row.id)
@@ -156,9 +179,9 @@ const columns = [
                                 tertiary: true,
                                 type: "primary",
                             },
-                            { default: () => t('changeMailAddress') }
+                            { default: () => t('openMailbox') }
                         ),
-                        default: () => `${t('changeMailAddress')}?`
+                        default: () => `${t('openMailbox')}?`
                     }
                 ),
                 h(NButton,
@@ -204,6 +227,8 @@ watch([page, pageSize], async () => {
 
 <template>
     <div>
+        <AddressCredentialModal v-model:show="showAddressCredential" :address="credentialAddress"
+            :jwt="currentAddressCredential" />
         <n-modal v-model:show="showTranferAddress" preset="dialog" :title="t('transferAddress')">
             <span>
                 <p>{{ t("transferAddressTip") }}</p>
