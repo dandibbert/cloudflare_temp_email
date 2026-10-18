@@ -18,7 +18,7 @@ import type { EmailRuleSettings } from "../models";
 async function email(message: ForwardableEmailMessage, env: Bindings, ctx: ExecutionContext) {
     const toAddress = normalizeAddressDomain(message.to);
     try {
-        if (await isBlocked(message.from, env)) {
+        if (await isBlocked(message, env)) {
             message.setReject("Sender blocked");
             console.log(JSON.stringify({ event: "mail_rejected", rule: "sender", to: toAddress }));
             return;
