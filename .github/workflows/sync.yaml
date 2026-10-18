@@ -2,17 +2,60 @@ name: Upstream Sync
 
 on:
   schedule:
-    - cron: "0 0 * * 1"
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 jobs:
   sync_latest_from_upstream:
-    name: Sync latest commits from upstream repo
+    name: Merge latest commits from upstream repo
     runs-on: ubuntu-latest
     if: ${{ github.event.repository.fork }}
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
-      - name: Sync upstream changes
-        run: gh repo sync ${{ github.repository }} --source dreamhunter2333/cloudflare_temp_email --branch main
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          # Optional PAT with `repo` + `workflow` scopes. GITHUB_TOKEN cannot push
+          # merges that touch .github/workflows/*.
+          token: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Merge upstream into main
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+          UPSTREAM: https://github.com/dreamhunter2333/cloudflare_temp_email.git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream "$UPSTREAM"
+          git fetch upstream main
+
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "Already up to date with upstream"
+            exit 0
+          fi
+
+          if git merge --no-edit -m "chore: merge upstream main" upstream/main; then
+            if git push origin HEAD:main; then
+              echo "Merged and pushed upstream changes"
+              exit 0
+            fi
+            echo "Push to main failed, falling back to a pull request"
+          else
+            git merge --abort || true
+            echo "Merge conflict, falling back to a pull request"
+          fi
+
+          # Fallback: push upstream state to a branch and open a PR to resolve manually
+          git push --force origin upstream/main:refs/heads/upstream-sync
+          if [ -z "$(gh pr list --head upstream-sync --base main --state open --json number --jq '.[0].number')" ]; then
+            gh pr create --base main --head upstream-sync \
+              --title "chore: sync upstream main" \
+              --body "Automatic merge into main was not possible (conflict or push rejected). Please merge upstream-sync into main and resolve conflicts manually."
+          fi
+          # Fail the run so the deploy workflows (triggered on completion) are not misled
+          exit 1

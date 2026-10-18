@@ -5,6 +5,8 @@ on:
     workflows: [Upstream Sync]
     types: [completed]
   push:
+    branches:
+      - main
     tags:
       - "*"
   workflow_dispatch:

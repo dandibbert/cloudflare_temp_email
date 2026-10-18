@@ -12,6 +12,8 @@
 
 - feat: |Mail Rejection| Add admin-configurable subject and body block keywords with case-insensitive matching across decoded subjects, plain text, and visible HTML, rejecting matches before storage or external actions
 
+- feat: |Webhook| Add email filters with condition/AND/OR/NOT nodes, nesting, string and native regex matching, visual/JSON editing and rule checking; preserve all original From headers while still removing attachments when From is missing or invalid (issue #1155)
+- feat: |User| Search bound mailboxes by email address in address management with accurate pagination (issue #1156)
 - feat: |AI Extract| Add `AI_EXTRACT_MODE` to explicitly choose local rules only (`local`) or prefer Workers AI (`ai`); defaults to local rules when unset so mail content is never sent to AI. **Upgrade note**: deployments that relied on the Workers AI binding to enable AI extraction automatically must set `AI_EXTRACT_MODE = "ai"`
 
 ### Bug Fixes
@@ -20,11 +22,16 @@
 - fix: |Mail Rejection| Trust only configured `Authentication-Results` authserv IDs, defaulting to `mx.cloudflare.net`, so forged authentication headers in the original message cannot bypass rejection
 - fix: |Mail Rejection| Move unknown-address checks before MIME reads and stop processing when rule loading, address lookup, authentication/content parsing, or storage fails, preventing fail-open delivery and downstream forwarding, webhooks, Telegram pushes, or auto-replies
 
+- fix: |Mail| Check the SMTP envelope sender and every From email address against sender blacklists; parse addresses independently so body parsing failures or multiple From addresses cannot skip matching; preserve envelope checks on address parsing errors
 - fix: |AI Extract| In `ai` mode, an address allowlist miss now skips only the Workers AI call and still falls back to local verification-code extraction
+- fix: |Telegram| Fall back to HTML-to-text conversion when plain text body is empty, preventing "parse failed" messages in Telegram notifications
 
 ### Improvements
 
+- ci: |Deploy| Trigger backend and frontend deploy workflows on pushes to `main`
+- ci: |Sync| Upstream sync now merges upstream main daily, falling back to an `upstream-sync` PR on conflict or rejected push
 - feat: |AI Extract| Improve local verification-code rules: also read the mail subject; support codes before keywords (e.g. `116352（动态验证码）`, `ABC123 is your code`), `G-123456` prefixes, grouped / spaced / zero-width-split / full-width codes, and Russian, Spanish, Portuguese, French, German, Italian, Turkish and Hebrew keywords; reject numbers longer than 8 digits, decimals and amounts, times, digits in URLs and email addresses, tracking / order / voucher codes and letters-only words; only accept keyword-less numbers in stricter positions; bound input length and remove regex backtracking risks
+- feat: |Frontend| Unify desktop and mobile mail summaries with prominent subjects, full sender identities and body previews; use theme-aware reader buttons and attachment-count badges, add keyboard-accessible actions and a mail-details dialog
 
 ### Testing
 
