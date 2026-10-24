@@ -80,7 +80,7 @@ test.describe('Inbound mail rejection rules', () => {
     try {
       await saveSettings(request, { fromBlockList: [' Example.COM ', '', 'example.com'] });
       expect((await receiveMail(request, address.address, { from: 'User@NEWS.EXAMPLE.COM' })).rejected)
-        .toBe('Sender blocked');
+        .toBe('Reject from address');
 
       await saveSettings(request, { fromBlockList: [] });
       const readBack = await request.get(`${WORKER_URL}/admin/account_settings`, { headers: ADMIN_HEADERS });

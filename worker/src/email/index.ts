@@ -19,7 +19,7 @@ async function email(message: ForwardableEmailMessage, env: Bindings, ctx: Execu
     const toAddress = normalizeAddressDomain(message.to);
     try {
         if (await isBlocked(message, env)) {
-            message.setReject("Sender blocked");
+            message.setReject("Reject from address");
             console.log(JSON.stringify({ event: "mail_rejected", rule: "sender", to: toAddress }));
             return;
         }
