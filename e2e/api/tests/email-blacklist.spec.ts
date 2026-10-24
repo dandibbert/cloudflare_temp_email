@@ -27,6 +27,9 @@ test.describe('Sender blacklist matching', () => {
       ['quoted display name with comma', allowed, `"Example, Inc." <${blocked}>`, true],
       ['display name is not matched', allowed, `"${blocked}" <${allowed}>`, false],
       ['encoded display name', allowed, `=?UTF-8?B?5rWL6K+V?= <${blocked}>`, true],
+      ['group member matches', allowed, `Team: ${allowed}, ${blocked};`, true],
+      ['invalid first address still checks later addresses', allowed, `invalid, ${blocked}`, true],
+      ['encoded address-shaped display name is not matched', allowed, `=?UTF-8?B?${Buffer.from(blocked).toString('base64')}?= <${allowed}>`, false],
     ] as const) {
       test(`${source}: ${name}`, async () => {
         let reads = 0;
@@ -85,11 +88,11 @@ test.describe('Sender blacklist matching', () => {
     for (const [name, rule, expected] of [
       ['exact address', blocked, true],
       ['substring', 'blocked-sender', true],
-      ['case sensitive', blocked.toUpperCase(), false],
-      ['does not trim rules', ` ${blockedDomain}`, false],
-      ['empty rule matches', '', true],
+      ['case insensitive', blocked.toUpperCase(), true],
+      ['trims rules', ` ${blockedDomain}`, true],
+      ['empty rule is ignored', '', false],
     ] as const) {
-      test(`${source}: preserves legacy ${name}`, async () => {
+      test(`${source}: ${name}`, async () => {
         const env = {
           BLACK_LIST: source === 'environment' ? `other.invalid,${rule}` : '',
           KV: { get: async () => source === 'KV' ? ['other.invalid', rule] : [] },
@@ -118,10 +121,14 @@ test.describe('Sender blacklist receive pipeline', () => {
     ['Reply-To is not From', allowed, `From: ${allowed}\r\nReply-To: ${blocked}`, false],
     ['missing From still checks envelope', blocked, '', true],
     ['missing From permits allowed envelope', allowed, '', false],
-    ['retains case-sensitive matching', allowed, `From: ${blocked.toUpperCase()}`, false],
+    ['case-insensitive matching', allowed, `From: ${blocked.toUpperCase()}`, true],
     ['second From address matches', allowed, `From: ${allowed}, ${blocked}\r\nSender: ${allowed}`, true],
     ['multiple allowed From addresses', allowed, `From: ${allowed}, other@allowed.e2e.invalid\r\nSender: ${allowed}`, false],
     ['repeated From headers', allowed, `From: ${allowed}\r\nFrom: ${blocked}`, true],
+    ['blocked first repeated From', allowed, `From: ${blocked}\r\nFrom: ${allowed}`, true],
+    ['invalid first repeated From', allowed, `From: invalid\r\nFrom: ${blocked}`, true],
+    ['group member From', allowed, `From: Team: ${allowed}, ${blocked};`, true],
+    ['encoded address-shaped display name', allowed, `From: =?UTF-8?B?${Buffer.from(blocked).toString('base64')}?= <${allowed}>`, false],
     ['blocked From with excessive MIME nesting', allowed, `From: ${blocked}`, true, true],
   ] as const) {
     test(name, async ({ request }) => {
