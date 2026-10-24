@@ -53,9 +53,15 @@ jobs:
           # Fallback: push upstream state to a branch and open a PR to resolve manually
           git push --force origin upstream/main:refs/heads/upstream-sync
           if [ -z "$(gh pr list --head upstream-sync --base main --state open --json number --jq '.[0].number')" ]; then
-            gh pr create --base main --head upstream-sync \
-              --title "chore: sync upstream main" \
-              --body "Automatic merge into main was not possible (conflict or push rejected). Please merge upstream-sync into main and resolve conflicts manually."
+            # The freshly pushed ref may not be visible to the API yet, so retry
+            for delay in 5 15 30; do
+              sleep "$delay"
+              if gh pr create --base main --head upstream-sync \
+                --title "chore: sync upstream main" \
+                --body "Automatic merge into main was not possible (conflict or push rejected). Please merge upstream-sync into main and resolve conflicts manually."; then
+                break
+              fi
+            done
           fi
           # Fail the run so the deploy workflows (triggered on completion) are not misled
           exit 1
