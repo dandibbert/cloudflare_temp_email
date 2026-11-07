@@ -97,7 +97,7 @@ const receiveMail = async (request: Request, env: Bindings, ctx: ExecutionContex
         prepare(sql: string) {
             const statement = env.DB.prepare(sql);
             const write = forwardFailure.startsWith('write-') && sql.startsWith('INSERT INTO raw_mails ');
-            const reject = forwardFailure === 'reject' && sql === 'SELECT id FROM address where name = ? ';
+            const reject = forwardFailure === 'reject' && /^SELECT\s+id\s+FROM\s+address\s+WHERE\s+name\s*=\s*\?\s*$/i.test(sql);
             if (!write && !reject) return statement;
             return {
                 bind(...values: unknown[]) {

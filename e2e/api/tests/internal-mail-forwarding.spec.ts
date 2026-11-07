@@ -267,7 +267,8 @@ for (const [name, base] of [['plaintext', WORKER_URL], ['gzip', WORKER_GZIP_URL]
               success: true, forwardedTo: [external],
             });
             expect(result.workerCalls.map((mail: { to: string }) => mail.to)).toEqual([
-              ...(failure.startsWith('write-') ? [failed.address] : []), target.address, source.address,
+              // This fork stops processing a target when persistence fails.
+              target.address, source.address,
             ]);
             expect(await listMails(request, base, source.jwt)).toHaveLength(1);
             expect(await listMails(request, base, target.jwt)).toHaveLength(1);
