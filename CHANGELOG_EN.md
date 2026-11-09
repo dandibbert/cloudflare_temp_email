@@ -12,6 +12,7 @@
 
 ### Features
 
+- feat: |Admin| Switch between single and batch creation, create batches of up to 100 random-name mailboxes, and export their auto-login links as spreadsheet-safe or lossless CSV
 - feat: |Mail Forwarding| Route forwarding rules internally by configured domain with independent receive processing, extraction and notifications, no second forwarding and only one auto-reply; optionally delete the original at the end and keep global forwarding external-only with its existing behavior
 - feat: |User System| Add `DISABLE_USER_SYSTEM` to block user APIs, disable user admin tokens, and hide user interfaces
 - feat: |Mailbox Login| Add a password-only login-page switch that requires mailbox passwords; preserve existing credentials, login links, API access, and JWT lifetimes
@@ -20,6 +21,7 @@
 ### Bug Fixes
 
 - fix: |Scheduled Cleanup| Catch errors for each built-in and custom SQL cleanup task, log failures, and continue with subsequent tasks
+- fix: |Header| Add horizontal spacing to the phone header
 - fix: |Mail Processing| Use the newly stored row ID for metadata updates and Telegram links, avoiding wrong-row updates or links when Message-ID is repeated or missing
 - fix: |Mail Reader| Reset inherited application defaults in Shadow mail and use browser-default system colors for a normal document while preserving sender colors
 - fix: |Telegram| Clean up the current push recipient's binding and push mapping before admin mailbox deletion, freeing a slot and preventing stale pushes on recreation; KV cleanup failures preserve the mailbox for retry, while database deletion failures may leave it unbound
