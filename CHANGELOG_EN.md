@@ -12,15 +12,22 @@
 
 ### Features
 
+- feat: |Mailbox Login| Keep session-token access with expiry details, hiding legacy credential contents and blocking legacy cache switches in password-only mode while retaining cache removal
+- feat: |Mailbox Sessions| Extend renewable 30-day JWT issuance to mailbox creation and authorized user, admin, and Telegram access
+- feat: |Mailbox Sessions| Update only the active mailbox JWT on renewal, retaining the existing string cache; expired historical tokens require login; show login method columns or tags only when both token types appear in the list
 - feat: |Admin| Switch between single and batch creation, create batches of up to 100 random-name mailboxes, and export their auto-login links as spreadsheet-safe or lossless CSV
 - feat: |Admin Statistics| Add a dashboard with mail, mailbox, user and sent mail totals, 7- and 30-day mailbox and user activity, and site-wide trends by date
 - feat: |Mail Forwarding| Route forwarding rules internally by configured domain with independent receive processing, extraction and notifications, no second forwarding and only one auto-reply; optionally delete the original at the end and keep global forwarding external-only with its existing behavior
 - feat: |User System| Add `DISABLE_USER_SYSTEM` to block user APIs, disable user admin tokens, and hide user interfaces
-- feat: |Mailbox Login| Add a password-only login-page switch that requires mailbox passwords; preserve existing credentials, login links, API access, and JWT lifetimes
+- feat: |Mailbox Sessions| Issue 30-day JWTs at password login when password-only mode is effective, validate mailbox access, and renew through settings below 7 days
+- feat: |Mailbox Login| Add a password-only login-page switch that requires mailbox passwords; preserve existing credentials, login links, API access, and legacy JWT lifetimes
 - feat: |Mailbox Credential| Show a QR code of the auto-login link in the credential dialog for opening the mailbox on mobile, with a reminder that anyone with the QR code can access the mailbox (issue #1189)
 
 ### Bug Fixes
 
+- fix: |Mail Reader| Sanitize Shadow DOM email previews when remote images are allowed
+- fix: |Health Check| Return `OK` from `/health_check` when the Worker has an `ASSETS` binding instead of the frontend page, so uptime monitors can use it
+- fix: |Create Address| Lowercase generated names before filtering characters, so the default `[^a-z0-9]` rule no longer drops the first letter of each name part and leaves names mangled or too short
 - fix: |Mail Reader| Sandbox regular and fullscreen iframe previews to block scripts in email bodies
 - fix: |Scheduled Cleanup| Catch errors for each built-in and custom SQL cleanup task, log failures, and continue with subsequent tasks
 - fix: |Header| Add horizontal spacing to the phone header

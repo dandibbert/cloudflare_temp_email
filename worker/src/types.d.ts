@@ -130,9 +130,14 @@ type Bindings = {
     CLEANUP_BATCH_SIZE: string | number | undefined
 }
 
+type JwtType = 'address_credential_login' | 'address_password_login'
+
 type JwtPayload = {
     address: string
     address_id: number
+    type?: JwtType
+    iat?: number
+    exp?: number
 }
 
 type UserPayload = {
