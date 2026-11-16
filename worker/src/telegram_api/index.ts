@@ -70,6 +70,7 @@ api.get("/admin/telegram/status", async (c) => {
 
 api.get("/admin/telegram/settings", settings.getTelegramSettings);
 api.post("/admin/telegram/settings", settings.saveTelegramSettings);
+api.patch("/admin/telegram/settings/mini_app_url", settings.updateTelegramMiniAppUrl);
 api.post("/telegram/get_bind_address", miniapp.getTelegramBindAddress);
 api.post("/telegram/new_address", miniapp.newTelegramAddress);
 api.post("/telegram/bind_address", miniapp.bindAddress);

@@ -113,6 +113,7 @@ When `ADMIN_API_IP_WHITELIST` is unset or empty, source IPs are not restricted. 
 | `ENABLE_CHECK_JUNK_MAIL`        | Text/JSON | No       | Whether to enable junk mail checking, used with the following two lists                                                | `false`              | `true`                     |
 | `JUNK_MAIL_CHECK_LIST`          | JSON      | No       | Existence check; registered failure/error results are junk, while `none` and SPF/DKIM `neutral` are treated as absent  | `[]`                 | `["spf", "dkim", "dmarc"]` |
 | `JUNK_MAIL_FORCE_PASS_LIST`     | JSON      | No       | Strict pass check; every item must explicitly return `pass`, otherwise it is treated as junk                           | `[]`                 | `["spf", "dkim", "dmarc"]` |
+| `JUNK_MAIL_TRUSTED_AUTHSERV_IDS` | JSON | No | Trusted `Authentication-Results` authserv IDs for junk checking | `["mx.cloudflare.net"]`; Cloudflare Email Routing only | `["mx.cloudflare.net"]` |
 | `FORWARD_ADDRESS_LIST`          | JSON      | No       | Global external-only forwarding via Cloudflare; does not use internal mailbox delivery                                | `[]`; disabled       | `["xxx@xxx.com"]`          |
 | `REMOVE_EXCEED_SIZE_ATTACHMENT` | Text/JSON | No       | If attachment exceeds 2MB, remove it; email may lose some information due to parsing                                   | `false`              | `true`                     |
 | `REMOVE_ALL_ATTACHMENT`         | Text/JSON | No       | Remove all attachments; email may lose some information due to parsing                                                 | `false`              | `true`                     |
@@ -121,6 +122,10 @@ When `ADMIN_API_IP_WHITELIST` is unset or empty, source IPs are not restricted. 
 
 > [!NOTE]
 > Authentication results follow their standards: SPF `none` means no usable domain or SPF record was found, and SPF `neutral` must be treated like `none`; DKIM `none` means the message was unsigned, and DKIM `neutral` is also treated as unsigned; DMARC `none` means no applicable DMARC policy was found. Unregistered results and unsupported method versions are ignored. `JUNK_MAIL_CHECK_LIST` treats these results as absent, while `JUNK_MAIL_FORCE_PASS_LIST` still requires an explicit supported `pass`
+>
+> To prevent forged authentication results in the original message, junk checking uses only the first `Authentication-Results` header written by `mx.cloudflare.net` by default. If mail passes through a trusted custom gateway first, add its actual `authserv-id` to `JUNK_MAIL_TRUSTED_AUTHSERV_IDS`.
+>
+> The admin panel's "Subject and content block keywords" setting performs case-insensitive substring matching against the decoded subject, plain-text body, and visible HTML text. A match rejects the mail before storage, forwarding, webhooks, Telegram push, or auto-reply. It accepts up to 200 keywords of 200 characters each.
 >
 > `ENABLE_MAIL_GZIP` adds CPU cost for gzip compression on write and decompression on read. Free-tier Workers are more likely to hit CPU limits, so a paid plan is recommended before enabling it
 >

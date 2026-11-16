@@ -11,13 +11,17 @@ export const check_if_junk_mail = async (
         return false;
     }
     const parsedEmail = await commonParseMail(parsedEmailContext);
-    if (!parsedEmail?.headers) return false;
+    if (!parsedEmail?.headers) {
+        throw new Error("Unable to parse headers for junk mail check");
+    }
 
     const checkListWhenExist = getStringArray(env.JUNK_MAIL_CHECK_LIST);
     const forcePassList = getStringArray(env.JUNK_MAIL_FORCE_PASS_LIST);
+    const trustedAuthservIds = getStringArray(env.JUNK_MAIL_TRUSTED_AUTHSERV_IDS);
     return isJunkMailByHeaders(
         parsedEmail.headers,
         checkListWhenExist,
         forcePassList,
+        trustedAuthservIds.length > 0 ? trustedAuthservIds : undefined,
     );
 }
