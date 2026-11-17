@@ -12,6 +12,7 @@
 
 ### Features
 
+- feat: |Mail Forwarding| Add recipient address regex filters to forwarding rules, reusing internal delivery with any/all matching
 - feat: |Mailbox Login| Keep session-token access with expiry details, hiding legacy credential contents and blocking legacy cache switches in password-only mode while retaining cache removal
 - feat: |Mailbox Sessions| Extend renewable 30-day JWT issuance to mailbox creation and authorized user, admin, and Telegram access
 - feat: |Mailbox Sessions| Update only the active mailbox JWT on renewal, retaining the existing string cache; expired historical tokens require login; show login method columns or tags only when both token types appear in the list
@@ -25,17 +26,24 @@
 
 ### Bug Fixes
 
+- fix: |Upstream Sync| Preserve custom trusted authentication service configuration in the updated environment-variable tables
+
+- fix: |Inbox| Keep the current message and restore the page and page size when pagination fails
+- fix: |Inbox| Show simple inbox refresh success only after a successful fetch
 - fix: |Mail Reader| Sanitize Shadow DOM email previews when remote images are allowed
 - fix: |Health Check| Return `OK` from `/health_check` when the Worker has an `ASSETS` binding instead of the frontend page, so uptime monitors can use it
 - fix: |Create Address| Lowercase generated names before filtering characters, so the default `[^a-z0-9]` rule no longer drops the first letter of each name part and leaves names mangled or too short
 - fix: |Mail Reader| Sandbox regular and fullscreen iframe previews to block scripts in email bodies
 - fix: |Scheduled Cleanup| Catch errors for each built-in and custom SQL cleanup task, log failures, and continue with subsequent tasks
 - fix: |Header| Add horizontal spacing to the phone header
+- fix: |Inbox| Keep failed batch-delete selections and show success only when the batch completes
 - fix: |Mail Processing| Use the newly stored row ID for metadata updates and Telegram links, avoiding wrong-row updates or links when Message-ID is repeated or missing
 - fix: |Mail Reader| Reset inherited application defaults in Shadow mail and use browser-default system colors for a normal document while preserving sender colors
 - fix: |Telegram| Clean up the current push recipient's binding and push mapping before admin mailbox deletion, freeing a slot and preventing stale pushes on recreation; KV cleanup failures preserve the mailbox for retry, while database deletion failures may leave it unbound
 - fix: |CI| Fix WASM npm publishing paths so local tarballs are not interpreted as GitHub repositories
 - fix: |CI| Use the E2E image's built-in tools for service probes so its build does not need Ubuntu package mirrors
+- fix: |CI| Prevent intermittent failures in the recent-mail cleanup test when it crosses a second boundary
+- fix: |CI| Wait for the forwarding settings refresh after saving so browser tests do not intermittently submit stale settings
 - fix: |Mail Parser| Upgrade WASM parser dependencies and use raw values only for structured headers, preserving decoded text headers while fixing `header.From` webhook filters and sender loss after attachment removal
 - fix: |Mail Parser| Support postal-mime v4's first-header semantics: handle empty/missing From in fallback parsing and regenerate MIME type/encoding headers when removing attachments to preserve stored message bodies
 - fix: |Telegram| Store separate permanent internal binding tokens, preserve historical expired bindings, and issue mailbox credentials on access while rejecting internal tokens at mailbox APIs
@@ -44,6 +52,8 @@
 
 ### Improvements
 
+- perf: |CI| Reuse E2E images, schedule browser tests in parallel, reduce page reloads, fixed waits and repeated browser actions, and speed up WASM tool installation
+- docs: |Documentation| Add guidance for mailbox, User Center, and Admin Console login entry points; list each Worker variable's required status and default behavior; explain custom roles; compare sending channels; and update Node.js compatibility steps by compatibility date
 - perf: |Database| Upgrade the schema to `v0.0.10` with a covering index for unknown-mail cleanup and an expression-based composite index for domain cleanup; compare major, minor, and patch versions numerically to avoid two-digit version errors and version-marker downgrades
 - docs: |User| Document mailbox binding, bound mailbox credential retrieval, and unbinding APIs with dual authentication requirements and request examples
 
