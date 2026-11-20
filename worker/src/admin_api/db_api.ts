@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS address (
     name TEXT UNIQUE,
     password TEXT,
     source_meta TEXT,
+    expires_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -42,6 +43,8 @@ CREATE INDEX IF NOT EXISTS idx_address_created_at ON address(created_at);
 CREATE INDEX IF NOT EXISTS idx_address_updated_at ON address(updated_at);
 
 CREATE INDEX IF NOT EXISTS idx_address_source_meta ON address(source_meta);
+
+CREATE INDEX IF NOT EXISTS idx_address_expires_at ON address(expires_at);
 
 CREATE TABLE IF NOT EXISTS auto_reply_mails (
     id INTEGER PRIMARY KEY,
@@ -225,6 +228,21 @@ export default {
                 await c.env.DB.exec(
                     `ALTER TABLE raw_mails ADD COLUMN is_unread INTEGER;`
                 );
+            }
+        }
+        if (!version || compareVersions(version, "v0.0.10") <= 0) {
+            // migration to v0.0.11: add expires_at column when address table already exists without it
+            const tableInfo = await c.env.DB.prepare(`PRAGMA table_info(address)`).all();
+            if (tableInfo.results && tableInfo.results.length > 0
+                && !tableInfo.results.some((col: any) => col.name === 'expires_at')) {
+                try {
+                    await c.env.DB.exec(`ALTER TABLE address ADD COLUMN expires_at DATETIME;`);
+                } catch (error) {
+                    const refreshedInfo = await c.env.DB.prepare(`PRAGMA table_info(address)`).all();
+                    if (!refreshedInfo.results?.some((col: any) => col.name === 'expires_at')) {
+                        throw error;
+                    }
+                }
             }
         }
         if (!version || compareVersions(version, CONSTANTS.DB_VERSION) < 0) {

@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useScopedI18n } from '@/i18n/app'
 import { api } from '../../api'
+import { resolveExpiryPayload } from '../../utils'
 import BatchExportModal from './BatchExportModal.vue'
 
 const props = defineProps({
@@ -11,6 +12,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['busy'])
 const { t } = useScopedI18n('views.admin.BatchCreate')
+const { t: createAccountT } = useScopedI18n('views.admin.CreateAccount')
 const message = useMessage()
 const busy = ref(false)
 const batchCount = ref(10)
@@ -32,15 +34,24 @@ const createBatch = async () => {
         return
     }
     const count = batchCount.value
-    const options = { ...props.options }
-    const normalization = props.addressRegex
+    const { expiryMode, customExpiresAt, ...options } = props.options
+    if (!resolveExpiryPayload(expiryMode, customExpiresAt)) {
+        batchError.value = createAccountT('invalidExpiryDateTime')
+        message.error(createAccountT('invalidExpiryDateTime'))
+        return
+    }
     batchCompleted.value = 0
     batchRequested.value = count
     batchError.value = ''
+    const normalization = props.addressRegex
     busy.value = true
     emit('busy', true)
     try {
         for (let i = 0; i < count && !unmounted; i++) {
+            const expiry = resolveExpiryPayload(expiryMode, customExpiresAt)
+            if (!expiry) {
+                throw new Error(createAccountT('invalidExpiryDateTime'))
+            }
             const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789'
             const name = Array.from(crypto.getRandomValues(new Uint8Array(30)),
                 byte => alphabet[byte % alphabet.length]).join('')
@@ -50,7 +61,7 @@ const createBatch = async () => {
             }
             const res = await api.fetch('/admin/new_address', {
                 method: 'POST',
-                body: JSON.stringify({ ...options, name }),
+                body: JSON.stringify({ ...options, name, ...expiry }),
                 showLoading: false,
             })
             if (unmounted) break

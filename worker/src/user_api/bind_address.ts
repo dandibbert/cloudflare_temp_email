@@ -5,6 +5,7 @@ import { isAddressCountLimitReached } from "../utils"
 import { unbindTelegramByAddress } from '../telegram_api/common';
 import i18n from '../i18n';
 import { updateAddressUpdatedAt, commonGetUserRole, handleListQuery, hideObjectFields } from '../common';
+import { isAddressExpired } from '../utils/address_expiry';
 
 export const getBindedAddressById = async (
     c: Context<HonoCustomType>,
@@ -15,11 +16,13 @@ export const getBindedAddressById = async (
         return null;
     }
     const address = await c.env.DB.prepare(
-        `SELECT a.name FROM users_address ua`
+        `SELECT a.* FROM users_address ua`
         + ` JOIN address a ON a.id = ua.address_id`
         + ` WHERE ua.user_id = ? AND ua.address_id = ?`
-    ).bind(user_id, address_id).first<string>('name');
-    return address ?? null;
+    ).bind(user_id, address_id).first<{ name: string; expires_at?: string | null }>();
+    if (!address) return null;
+    if (isAddressExpired(c, address.expires_at)) return null;
+    return address.name;
 }
 
 const UserBindAddressModule = {
@@ -37,10 +40,13 @@ const UserBindAddressModule = {
             return c.text(msgs.NoAddressOrUserTokenMsg, 400)
         }
         // check if address exists
-        const db_address_id = await c.env.DB.prepare(
-            `SELECT id FROM address where id = ?`
-        ).bind(address_id).first("id");
-        if (!db_address_id) {
+        const addressRow = await c.env.DB.prepare(
+            `SELECT * FROM address where id = ?`
+        ).bind(address_id).first<{ id: number; expires_at?: string | null }>();
+        if (!addressRow) {
+            return c.text(msgs.AddressNotFoundMsg, 400)
+        }
+        if (isAddressExpired(c, addressRow.expires_at)) {
             return c.text(msgs.AddressNotFoundMsg, 400)
         }
         // check if user exists
@@ -196,10 +202,15 @@ const UserBindAddressModule = {
         const { user_id } = c.get("userPayload");
         const { address_id, target_user_email } = await c.req.json();
         // check if address exists
-        const address = await c.env.DB.prepare(
-            `SELECT name FROM address where id = ?`
-        ).bind(address_id).first<string>("name");
+        const addressRow = await c.env.DB.prepare(
+            `SELECT * FROM address where id = ?`
+        ).bind(address_id).first<{ name: string; expires_at?: string | null }>();
+        const address = addressRow?.name;
+        const expiresAt = addressRow?.expires_at ?? null;
         if (!address) {
+            return c.text(msgs.AddressNotFoundMsg, 400)
+        }
+        if (isAddressExpired(c, expiresAt)) {
             return c.text(msgs.AddressNotFoundMsg, 400)
         }
         // check if user exists
@@ -244,9 +255,10 @@ const UserBindAddressModule = {
             `DELETE FROM address WHERE id = ? `
         ).bind(address_id).run();
         // new address
-        const { success: newAddressSuccess } = await c.env.DB.prepare(
-            `INSERT INTO address(name) VALUES(?)`
-        ).bind(address).run();
+        const { success: newAddressSuccess } = await (expiresAt === null
+            ? c.env.DB.prepare(`INSERT INTO address(name) VALUES(?)`).bind(address)
+            : c.env.DB.prepare(`INSERT INTO address(name, expires_at) VALUES(?, ?)`).bind(address, expiresAt)
+        ).run();
         if (!newAddressSuccess) {
             throw new Error(msgs.FailedCreateAddressMsg)
         }
